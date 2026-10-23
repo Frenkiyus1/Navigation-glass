@@ -9,3 +9,8 @@ local.properties
 .tools/
 .DS_Store
 Thumbs.db
+
+node_modules/
+.wrangler/
+.dev.vars
+.env

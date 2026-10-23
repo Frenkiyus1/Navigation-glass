@@ -1,0 +1,6 @@
+{
+  "tileUrl": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  "searchUrl": "https://photon.komoot.io/api/",
+  "routingBaseUrl": "https://routing.openstreetmap.de",
+  "alertDistanceMeters": 180
+}

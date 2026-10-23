@@ -1,0 +1,9 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(self), bluetooth=(self), screen-wake-lock=(self)
+  X-Frame-Options: DENY
+/config.json
+  Cache-Control: public, max-age=300
+/sw.js
+  Cache-Control: no-cache

@@ -1,0 +1,22 @@
+{
+  "name": "navigation-glass",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Free GPS navigation and Web Bluetooth control for ESP32 glasses",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check web/app.js && node --test tests/*.test.mjs",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev",
+    "test:browser": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "wrangler": "4.152.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

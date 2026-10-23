@@ -1,4 +1,75 @@
-# Navigation Glasses ? Google Navigation SDK + BLE + ESP32-C3
+# Navi Glass — Web GPS + Bluetooth, miễn phí
+
+Bản web có bản đồ OpenStreetMap, tìm kiếm địa điểm, GPS thực, chỉ dẫn rẽ bằng tiếng Việt, đọc chỉ dẫn, mô phỏng hành trình và gửi lệnh BLE tới kính ESP32-C3. **Phần web không cần Google API key, billing hoặc thẻ thanh toán.**
+
+## Deploy trên Cloudflare đang liên kết GitHub
+
+Repo có sẵn `wrangler.jsonc`; Wrangler triển khai thư mục **`web/`**. Lệnh deploy cũ `npx wrangler deploy` dùng được, khắc phục lỗi không tìm thấy static files.
+
+Trong Cloudflare Workers & Pages → dự án → Settings → Builds:
+
+| Mục | Giá trị |
+| --- | --- |
+| Repository / branch | `Frenkiyus1/Navigation-glass` / `main` |
+| Root directory | Để trống, dùng thư mục gốc repo |
+| Build command | Để trống; web không cần build |
+| Deploy command | `npx wrangler deploy` |
+| Worker name | `navigation-glass`, khớp `name` trong `wrangler.jsonc` |
+
+Nếu Worker hiện có tên khác, sửa `name` trong `wrangler.jsonc` cho khớp tên Worker trước khi deploy. Chọn **Retry deployment** sau khi GitHub đã nhận bản cập nhật. Không chọn `app/` hoặc `esp32/` làm root directory.
+
+Không cần thêm secret hoặc API key cho bản web. Dùng địa chỉ **HTTPS** của Cloudflare trên điện thoại để GPS/Bluetooth được cấp quyền. Hạn mức hosting phụ thuộc gói Cloudflare của tài khoản.
+
+## Chạy và kiểm tra tại máy
+
+Cần Node.js 22 trở lên:
+
+```sh
+npm ci
+npm run dev
+```
+
+Mở `http://localhost:8787`. Localhost được trình duyệt xem là môi trường bảo mật; địa chỉ HTTP qua mạng LAN trên điện thoại không được cấp GPS/Bluetooth như HTTPS.
+
+```sh
+npm run check
+npx wrangler deploy --dry-run
+npm run test:browser
+```
+
+Kiểm thử trình duyệt dùng Chrome đã cài trên Windows. Trên hệ điều hành khác, chạy `npx playwright install chromium` hoặc đặt `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` tới executable Chromium/Chrome hiện có. Kiểm thử GPS/BLE dùng thiết bị giả lập; cần thử lại với điện thoại và kính thật.
+
+## Dùng web với kính
+
+1. Nạp firmware `esp32/NavigationGlasses/NavigationGlasses.ino` vào ESP32-C3.
+2. Mở web HTTPS bằng **Chrome trên Android**, bật Bluetooth và GPS.
+3. Chọn **Kết nối kính**, chọn thiết bị `NavigationGlasses` và cho phép truy cập.
+4. Bấm **Vị trí của tôi** rồi tìm điểm đến. Có thể chạm bản đồ để chọn hai điểm hoặc nhập tọa độ `10.77, 106.70`.
+5. Chọn xe đạp, đi bộ hoặc ô tô, bấm **Tìm đường** rồi **Bắt đầu GPS**.
+6. Kính nhận hướng khi còn 180 m tới điểm rẽ; có thể đổi ngưỡng sang 100/250 m.
+7. Dùng **Mô phỏng** hoặc **Đi thử một vòng Sài Gòn** để thử mà không cần di chuyển. Thanh tiến độ giúp thử từng điểm rẽ.
+8. **Dừng hành trình** sẽ hủy GPS và mô phỏng, đồng thời gửi OFF. Thử đèn thủ công tự tắt sau bốn giây.
+
+Giữ tab và màn hình mở khi dẫn đường. Web yêu cầu giữ màn hình sáng nếu trình duyệt hỗ trợ. Khi đổi tab, GPS quá cũ (>15 giây), sai số >50 m hoặc cách tuyến >60 m, tín hiệu kính chuyển OFF. Khi ngoài tuyến, chọn tính lại từ vị trí hiện tại. Firmware tự tắt LED nếu không nhận lệnh trong năm giây.
+
+Safari/iPhone và Firefox chưa hỗ trợ kết nối kính bằng Web Bluetooth. Bản đồ và mô phỏng vẫn dùng được. Web Bluetooth cần thiết bị BLE có cùng service/characteristic UUID với firmware hiện có.
+
+## Dịch vụ miễn phí và giới hạn
+
+- Bản đồ: [OpenStreetMap tile usage policy](https://operations.osmfoundation.org/policies/tiles/). Có attribution, giữ cache HTTP; không tải sẵn/bulk-download tile.
+- Tìm kiếm: [Photon public demo server](https://github.com/komoot/photon#demo-server). Chỉ gửi khi người dùng bấm tìm, có cache và giới hạn tần suất. Dịch vụ công cộng có thể giới hạn hoặc ngừng phản hồi.
+- Tuyến: [FOSSGIS/OSRM](https://routing.openstreetmap.de/about.html). Tối đa một request/giây theo chính sách; ứng dụng giới hạn các lần tính tuyến, cache kết quả và không tự động gọi theo mỗi bản tin GPS. Không dành cho lưu lượng lớn.
+- Các dịch vụ có thể thay đổi trong `web/config.json`. Khi nhiều người cùng sử dụng, cần chuyển sang nhà cung cấp phù hợp hoặc tự host; “không cần thẻ” không có nghĩa là dịch vụ công cộng không có hạn mức.
+- Hiện hỗ trợ tuyến **xe đạp, đi bộ, ô tô**. Chưa có dữ liệu giao thông trực tiếp, chỉ dẫn làn đường hoặc profile riêng cho xe máy. Không thay tên tuyến ô tô/xe đạp thành tuyến xe máy.
+- Bản web không đọc hướng dẫn từ ứng dụng Google Maps. Nó tính tuyến bằng OSRM và theo dõi GPS trong trình duyệt.
+- Tọa độ điểm đầu/cuối được gửi tới dịch vụ tính tuyến; truy vấn địa điểm gửi tới Photon. Ứng dụng không ghi lịch sử GPS lên server. Ba điểm đến gần nhất chỉ lưu trong trình duyệt.
+- Service worker chỉ lưu giao diện/tuyến mẫu. Không tải bản đồ ngoại tuyến; tìm kiếm, tính tuyến mới và tile chưa có trong cache cần Internet.
+
+Thư viện Leaflet 1.9.4 được lưu trong `web/vendor/`, kèm license. Tuyến mẫu trong `web/data/demo-route.json` tính bằng FOSSGIS/OSRM từ dữ liệu OpenStreetMap, từ Chợ Bến Thành tới Nhà thờ Đức Bà.
+
+---
+
+# Android + ESP32: Google Navigation SDK
 
 The Android phone calculates routes using Google's Navigation SDK. It sends one-byte maneuver commands over BLE to an ESP32-C3, which drives two LEDs.
 
@@ -16,7 +87,7 @@ Open `esp32/NavigationGlasses/NavigationGlasses.ino` in Arduino IDE. Select **ES
 
 - GPIO1: left LED.
 - GPIO20: right LED. This pin is also UART0 RX; avoid a UART connection driving it while it is used as an LED output.
-- Each LED: GPIO ? 680 ohm resistor ? LED ? GND.
+- Each LED: GPIO -> 680 ohm resistor -> LED -> GND.
 
 Flash the sketch and check for `NavigationGlasses BLE ready` at 115200 baud. The glasses advertise the Nordic UART service UUID `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`; commands are written to characteristic `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`.
 
@@ -41,7 +112,7 @@ MAPS_API_KEY=YOUR_GOOGLE_MAPS_PLATFORM_API_KEY
 
 `local.properties` is ignored by Git. Never commit a real API key or signing keystore. The placeholder in `local.defaults.properties` allows builds and unit tests without a key; navigation requires a valid key at runtime.
 
-Open this folder in Android Studio and allow Gradle sync to install missing components. Use a physical Android phone with Google Play services and BLE. On Android 6?11, turn on system location services for BLE scanning.
+Open this folder in Android Studio and allow Gradle sync to install missing components. Use a physical Android phone with Google Play services and BLE. On Android 6-11, turn on system location services for BLE scanning.
 
 Build requirements:
 
@@ -69,7 +140,7 @@ On Windows, use `gradlew.bat assembleDebug testDebugUnitTest lintDebug`. The deb
 5. Long-press the map to choose a destination, then tap **Start**.
 6. The app requests a **TWO_WHEELER** route. This travel mode depends on regional availability.
 7. Within 180 m of the next maneuver, the corresponding LEDs blink. Missing or invalid instructions clear the LEDs.
-8. Tap **Simulate** to test an active route at 5? speed.
+8. Tap **Simulate** to test an active route at 5x speed.
 9. Tap **Stop** to cancel pending route calculation, stop guidance and simulation, and clear the LEDs. Arrival and closing the activity also stop the session.
 
 The alert distance is configured in `TurnAlertPolicy.TURN_ALERT_DISTANCE_METERS` in `app/src/main/java/com/example/navigationglasses/TurnAlertPolicy.kt`.
