@@ -28,7 +28,12 @@ export class GlassesBluetooth {
     let generation = ++this.generation;
     try {
       // Must be called directly from a user's click, before any awaited operation.
-      const device = await this.bluetooth.requestDevice({ filters: [{ services: [SERVICE_UUID] }] });
+      // Separate filters match either the advertised service or the glasses' name.
+      // Name-only matches still need permission to access the UART service.
+      const device = await this.bluetooth.requestDevice({
+        filters: [{ services: [SERVICE_UUID] }, { namePrefix: 'NavigationGlasses' }],
+        optionalServices: [SERVICE_UUID]
+      });
       if (generation !== this.generation) return;
       this.device = device;
       device.addEventListener('gattserverdisconnected', () => {

@@ -54,6 +54,15 @@ Giữ tab và màn hình mở khi dẫn đường. Web yêu cầu giữ màn hì
 
 Safari/iPhone và Firefox chưa hỗ trợ kết nối kính bằng Web Bluetooth. Bản đồ và mô phỏng vẫn dùng được. Web Bluetooth cần thiết bị BLE có cùng service/characteristic UUID với firmware hiện có.
 
+### Bấm kết nối nhưng không thấy kính
+
+- Mở trực tiếp bằng Chrome trên Android; cấp quyền Thiết bị ở gần/Bluetooth cho Chrome nếu hệ điều hành yêu cầu.
+- Ngắt kính khỏi app Android, ứng dụng kiểm tra BLE hoặc điện thoại khác, rồi nhấn RESET trên ESP32 và thử lại khi để kính gần điện thoại.
+- Với firmware tự sửa, giữ `addServiceUUID(SERVICE_UUID)` và `setScanResponse(true)`. Tên đầy đủ `NavigationGlasses` và UUID 128 bit cần hai gói quảng bá/phản hồi quét; tắt scan response có thể khiến tên bị rút ngắn. Web tìm theo UUID hoặc tên bắt đầu bằng `NavigationGlasses`.
+- Với ESP32-C3 SuperMini nối USB trực tiếp, bật **Tools → USB CDC On Boot → Enabled** trước khi nạp để xem Serial qua USB; chọn đúng cổng USB của kính.
+- Nạp lại firmware trong repo. Mở Serial Monitor ở **115200 baud** rồi nhấn RESET: cần thấy `BLE advertising requested: NavigationGlasses` và dòng service UUID. Nếu báo `ERROR`, gửi lại dòng lỗi; thông báo requested chỉ xác nhận yêu cầu khởi động quảng bá được thư viện chấp nhận, chưa xác nhận điện thoại đã nhận sóng.
+- Khi kết nối thành công, Serial Monitor hiện `BLE connected`; thử nút trái/phải sẽ có dòng `Command: 0x01` / `Command: 0x02`.
+
 ## Dịch vụ miễn phí và giới hạn
 
 - Bản đồ: [OpenStreetMap tile usage policy](https://operations.osmfoundation.org/policies/tiles/). Có attribution, giữ cache HTTP; không tải sẵn/bulk-download tile.
@@ -89,7 +98,7 @@ Open `esp32/NavigationGlasses/NavigationGlasses.ino` in Arduino IDE. Select **ES
 - GPIO20: right LED. This pin is also UART0 RX; avoid a UART connection driving it while it is used as an LED output.
 - Each LED: GPIO -> 680 ohm resistor -> LED -> GND.
 
-Flash the sketch and check for `NavigationGlasses BLE ready` at 115200 baud. The glasses advertise the Nordic UART service UUID `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`; commands are written to characteristic `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`.
+Flash the sketch, open Serial Monitor at 115200 baud, and reset the board. Check for `BLE advertising requested: NavigationGlasses` (request accepted, not a radio verification); a failed initialization or advertising request prints `ERROR`. The glasses advertise the Nordic UART service UUID `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`; commands are written to characteristic `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`.
 
 LEDs turn off when BLE disconnects or no valid update arrives for five seconds. The Android navigation feed refreshes commands once per second, including unchanged maneuvers. This also restores the display after reconnection.
 

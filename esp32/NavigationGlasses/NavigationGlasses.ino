@@ -47,8 +47,12 @@ class RxCallbacks : public BLECharacteristicCallbacks {
 };
 
 class ServerCallbacks : public BLEServerCallbacks {
+  void onConnect(BLEServer *server) override {
+    Serial.println("BLE connected");
+  }
   void onDisconnect(BLEServer *server) override {
     receiveCommand(CMD_OFF);
+    Serial.println("BLE disconnected; restarting advertising");
     BLEDevice::startAdvertising();
   }
 };
@@ -103,7 +107,11 @@ void setup() {
   pinMode(LED_RIGHT, OUTPUT);
   allOff();
 
-  BLEDevice::init("NavigationGlasses");
+  Serial.println("Initializing NavigationGlasses BLE...");
+  if (!BLEDevice::init("NavigationGlasses")) {
+    Serial.println("ERROR: BLE init failed. Check power and reset the ESP32.");
+    return;
+  }
   BLEServer *server = BLEDevice::createServer();
   server->setCallbacks(new ServerCallbacks());
 
@@ -117,10 +125,16 @@ void setup() {
 
   BLEAdvertising *adv = BLEDevice::getAdvertising();
   adv->addServiceUUID(SERVICE_UUID);
+  // The full name and 128-bit UUID do not fit together in a legacy packet.
+  // Allow the name to be sent in the scan response instead of truncating it.
   adv->setScanResponse(true);
-  BLEDevice::startAdvertising();
+  if (!adv->start()) {
+    Serial.println("ERROR: BLE advertising request failed. Reset the ESP32.");
+    return;
+  }
 
-  Serial.println("NavigationGlasses BLE ready");
+  Serial.println("BLE advertising requested: NavigationGlasses");
+  Serial.println("Service: " SERVICE_UUID);
 }
 
 void loop() {
